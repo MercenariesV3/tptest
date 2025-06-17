@@ -1,0 +1,116 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local LocalPlayer = Players.LocalPlayer
+local PetGiftingService = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("PetGiftingService")
+
+-- Create Anti-Scam Toggle GUI
+local screenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+screenGui.Name = "AntiScamGiftingUI"
+screenGui.ResetOnSpawn = false
+
+local container = Instance.new("Frame", screenGui)
+container.Size = UDim2.new(0, 250, 0, 120)
+container.Position = UDim2.new(0, 20, 0.5, -60)
+container.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+container.BackgroundTransparency = 0.1
+container.BorderSizePixel = 0
+container.AnchorPoint = Vector2.new(0, 0.5)
+
+local title = Instance.new("TextLabel", container)
+title.Size = UDim2.new(1, 0, 0, 40)
+title.Text = "Anti-Scam Gifting"
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 22
+title.TextColor3 = Color3.new(1, 1, 1)
+
+local toggleButton = Instance.new("TextButton", container)
+toggleButton.Size = UDim2.new(0.8, 0, 0, 35)
+toggleButton.Position = UDim2.new(0.1, 0, 0, 60)
+toggleButton.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+toggleButton.TextColor3 = Color3.new(1, 1, 1)
+toggleButton.Font = Enum.Font.SourceSansBold
+toggleButton.TextSize = 20
+toggleButton.Text = "OFF"
+
+local antiScamEnabled = false
+local lastGiftedPet = nil
+
+toggleButton.MouseButton1Click:Connect(function()
+	antiScamEnabled = not antiScamEnabled
+	if antiScamEnabled then
+		toggleButton.Text = "ON"
+		toggleButton.BackgroundColor3 = Color3.fromRGB(70, 255, 70)
+		print("Anti-Scam Enabled")
+	else
+		toggleButton.Text = "OFF"
+		toggleButton.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+		print("Anti-Scam Disabled")
+	end
+end)
+
+-- Hook into Pet Gifting
+local originalFireServer = PetGiftingService.FireServer
+PetGiftingService.FireServer = function(self, action, targetPlayer)
+	if antiScamEnabled and action == "GivePet" then
+		print("[AntiScam] Intercepted GivePet to:", targetPlayer)
+
+		-- Save dummy pet info
+		lastGiftedPet = {
+			name = "VisualPetClone",
+			id = tostring(math.random(100000, 999999))
+		}
+
+		-- Wait 1.5s, simulate loss, then show popup
+		task.delay(1.5, function()
+			createRetrievePopup(lastGiftedPet)
+		end)
+	end
+
+	return originalFireServer(self, action, targetPlayer)
+end
+
+-- Create retrieve button
+function createRetrievePopup(petData)
+	local popup = Instance.new("Frame", screenGui)
+	popup.Size = UDim2.new(0, 240, 0, 100)
+	popup.Position = UDim2.new(0.5, -120, 0.5, -50)
+	popup.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+	popup.BorderSizePixel = 0
+	popup.AnchorPoint = Vector2.new(0.5, 0.5)
+
+	local label = Instance.new("TextLabel", popup)
+	label.Size = UDim2.new(1, 0, 0.5, 0)
+	label.Text = "Gifted item lost. Retrieve?"
+	label.TextColor3 = Color3.new(1, 1, 1)
+	label.Font = Enum.Font.SourceSansBold
+	label.TextSize = 20
+	label.BackgroundTransparency = 1
+
+	local retrieveBtn = Instance.new("TextButton", popup)
+	retrieveBtn.Size = UDim2.new(0.8, 0, 0.3, 0)
+	retrieveBtn.Position = UDim2.new(0.1, 0, 0.6, 0)
+	retrieveBtn.Text = "Retrieve Item"
+	retrieveBtn.Font = Enum.Font.SourceSansBold
+	retrieveBtn.TextSize = 18
+	retrieveBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
+	retrieveBtn.TextColor3 = Color3.new(1, 1, 1)
+
+	retrieveBtn.MouseButton1Click:Connect(function()
+		-- Fake clone: Create a visual label showing item is "back"
+		local petClone = Instance.new("TextLabel", screenGui)
+		petClone.Size = UDim2.new(0, 150, 0, 30)
+		petClone.Position = UDim2.new(1, -160, 1, -40)
+		petClone.Text = petData.name .. " (Visual)"
+		petClone.Font = Enum.Font.SourceSans
+		petClone.TextSize = 16
+		petClone.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+		petClone.TextColor3 = Color3.new(1, 1, 1)
+		task.delay(5, function()
+			petClone:Destroy()
+		end)
+
+		popup:Destroy()
+	end)
+end

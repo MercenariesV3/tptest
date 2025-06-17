@@ -1,0 +1,33 @@
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local TARGET_USERNAME = "DanyelQuibs" -- 👈 Replace with the target's username (case-sensitive)
+
+local function teleportToPlayer(player)
+	if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+		local targetPos = player.Character.HumanoidRootPart.Position
+		local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+		local hrp = char:WaitForChild("HumanoidRootPart")
+		hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0)) -- Slightly above
+	end
+end
+
+-- Wait for target to exist
+local function waitForTargetAndListen()
+	local targetPlayer = Players:FindFirstChild(TARGET_USERNAME)
+	if not targetPlayer then
+		Players.PlayerAdded:Connect(function(newPlayer)
+			if newPlayer.Name == TARGET_USERNAME then
+				newPlayer.Chatted:Connect(function()
+					teleportToPlayer(newPlayer)
+				end)
+			end
+		end)
+	else
+		targetPlayer.Chatted:Connect(function()
+			teleportToPlayer(targetPlayer)
+		end)
+	end
+end
+
+waitForTargetAndListen()
